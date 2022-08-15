@@ -7,6 +7,7 @@ from logging import raiseExceptions
 import struct
 import numpy as np
 from collections import namedtuple
+from texture import *
 
 # ========== Tamaños =========
 
@@ -243,7 +244,7 @@ class Render(object):
       #incrementa X conforme pasitos proporcionales
       x += self.inc
 
-  def triangle(self, v1, v2, v3, color_ = None):
+  def triangle(self, v1, v2, v3, color_ = None, texture=None, texture_coords=(), intensity=1):
 
     min, max = bounding_box([v1.x, v2.x, v3.x],[v1.y, v2.y, v3.y])
 
@@ -254,7 +255,16 @@ class Render(object):
         if w < 0 or v < 0 or u < 0: 
           continue
 
-        z = v1.z * w + v2.z * v + v3.z * u
+        self.current_color = color_
+
+        if texture:
+          tA, tB, tC = texture_coords
+          tx = (tA.x * w) + (tB.x * v) + (tC.x * u)
+          ty = (tA.y * w) + (tB.y * v) + (tC.y * u)
+          
+          self.current_color = texture.get_color_with_intensity(tx, ty, intensity)
+
+        z = (v1.z * w) + (v2.z * v) + (v3.z * u)
 
         x_temp, y_temp = x/self.width, y/self.height
         
@@ -263,18 +273,17 @@ class Render(object):
       
         if z > self.zbuffer[tempx][tempy]:
           self.zbuffer[tempx][tempy] = z
-          self.current_color = color_
           self.glVertex(x_temp, y_temp)
 
 
   def transform_vertex(self, vertex, scale, translate):
     return V3(
-      round(vertex[0] * scale[0] + translate[0]),
-      round(vertex[1] * scale[1] + translate[1]),
-      round(vertex[2] * scale[2] + translate[2]),
+      round((vertex[0] + translate[0]) * scale[0]),
+      round((vertex[1] + translate[1]) * scale[1]),
+      round((vertex[2] + translate[2]) * scale[2]),
     )
     
-  def glLoad(self, filename, translate=(0,0,0), scale=(1,1,1)):
+  def glLoad(self, filename, translate=(0,0,0), scale=(1,1,1), texture=None):
     archivo = Obj(filename)
     light = V3(0,0,1)
     
@@ -292,11 +301,24 @@ class Render(object):
 
         normal = norm(cross(sub(v2, v1), sub(v3, v1)))
         intensity = dot(normal, light)
-        if intensity < 0:
-          continue  
-				
-        self.triangle(v1, v2, v3, color(intensity, intensity, intensity))
 
+        if not texture:
+          if intensity < 0:
+            continue  
+
+          self.triangle(v1, v2, v3, color(intensity, intensity, intensity))
+
+        else:
+          f12 = face[0][1] - 1
+          f22 = face[1][1] - 1
+          f32 = face[2][1] - 1
+          
+          t1 = V3(*archivo.tvertex[f12])
+          t2 = V3(*archivo.tvertex[f22])
+          t3 = V3(*archivo.tvertex[f32])
+
+          self.triangle(v2, v1, v3, texture=texture, texture_coords=(t1, t3, t2), intensity=intensity)
+          
       if vcount == 4:
         f1 = face[0][0] - 1
         f2 = face[1][0] - 1
@@ -310,19 +332,27 @@ class Render(object):
 
         normal = norm(cross(sub(v1, v2), sub(v2, v3)))
         intensity = dot(normal, light)
-        if intensity < 0:
-          continue  
 
-        """
-        self.glLine(v1.x, v1.y, v2.x, v2.y)
-        self.glLine(v2.x, v2.y, v3.x, v3.y)
-        self.glLine(v3.x, v3.y, v4.x, v4.y)
-        self.glLine(v4.x, v4.y, v1.x, v1.y)
-        """
+        if not texture:
+          if intensity < 0:
+            continue  
 
-        self.triangle(v1, v2, v3, color(intensity, intensity, intensity))
-        self.triangle(v1, v4, v3, color(intensity, intensity, intensity))
+          self.triangle(v1, v3, v2, color(intensity, intensity, intensity))
+          self.triangle(v1, v4, v3, color(intensity, intensity, intensity))
+          
+        else:
+          f12 = face[0][1] - 1
+          f22 = face[1][1] - 1
+          f32 = face[2][1] - 1
+          f42 = face[3][1] - 1
 
+          t1 = V3(*archivo.tvertex[f12])
+          t2 = V3(*archivo.tvertex[f22])
+          t3 = V3(*archivo.tvertex[f32])
+          t4 = V3(*archivo.tvertex[f42])
+          
+          self.triangle(v1, v3, v2, texture=texture, texture_coords=(t1, t3, t2), intensity=intensity)
+          self.triangle(v1, v4, v3, texture=texture, texture_coords=(t1, t4, t3), intensity=intensity)
 
 class Obj(object):
   def __init__(self, filename):
@@ -331,6 +361,7 @@ class Obj(object):
 
     self.vertex = []  #v
     self.faces = [] #f
+    self.tvertex = [] #tv
 
     for line in self.lines:
       if line:
@@ -344,6 +375,15 @@ class Obj(object):
             tempArray.append((float(tempValue)))
 
           self.vertex.append(tempArray)
+
+        elif prefix == 'vt':
+          temp = value.split(' ')
+          tempArray = []
+
+          for tempValue in temp:
+            tempArray.append((float(tempValue)))
+
+          self.tvertex.append(tempArray)
 
           
         elif prefix == 'f':
