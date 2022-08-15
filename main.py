@@ -14,8 +14,8 @@ def glpoint():
 
     r.glColor(1,1,1) #parametros en rango de 0 a 1
 
-    t.read('./model.bmp')
-    r.glLoad('./model.obj', (0,0,0), (300,300,300), t)
+    t.read('./rock.bmp')
+    r.glLoad('./rock.obj', (0,-200,0), (2,2,2), t)
 
     r.glFinish()
 

@@ -364,6 +364,7 @@ class Obj(object):
     self.tvertex = [] #tv
 
     for line in self.lines:
+      line = line.strip()
       if line:
         prefix, value = line.split(' ', 1)
 
