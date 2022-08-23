@@ -24,7 +24,7 @@ def color(r, g, b):
   return bytes([int(b*255), int(g*255), int(r*255)])
 
 # ========== VECTOR =========
-V3 = namedtuple('Point3', ['x', 'y', 'z'])
+V3 = namedtuple('P3', ['x', 'y', 'z'])
 
 
 def sum(v0, v1):
@@ -47,17 +47,9 @@ def cross(v0, v1):
   )
 
 def length(v0):
-  """
-    Input: 1 size 3 vector
-    Output: Scalar with the length of the vector
-  """  
   return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
 
 def norm(v0):
-  """
-    Input: 1 size 3 vector
-    Output: Size 3 vector with the normal of the vector
-  """  
   v0length = length(v0)
 
   if not v0length:
