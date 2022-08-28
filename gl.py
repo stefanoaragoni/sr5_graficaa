@@ -254,7 +254,7 @@ class Render(object):
           tx = (tA.x * w) + (tB.x * v) + (tC.x * u)
           ty = (tA.y * w) + (tB.y * v) + (tC.y * u)
           
-          self.current_color = texture.get_color_with_intensity(tx, ty, intensity)
+          self.current_color = texture.get_color(tx, ty, intensity)
 
         z = (v1.z * w) + (v2.z * v) + (v3.z * u)
 
@@ -376,6 +376,9 @@ class Obj(object):
           for tempValue in temp:
             tempArray.append((float(tempValue)))
 
+          if(len(tempArray)==2):
+            tempArray.append(0)
+            
           self.tvertex.append(tempArray)
 
           
