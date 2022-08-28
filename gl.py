@@ -9,7 +9,6 @@ import struct
 
 from texture import *
 from obj import *
-from matrixmath import *
 
 # ========== Tamaños =========
 
